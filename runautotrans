@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# set tolerance (actually tolerance^2)
+tol=.03 
+
+echo "What angle of attack"
+read AoAs
+
+echo "Goal transition location"
+read transs
+
+echo "Initial lower bound"
+read lowcons
+
+echo "Initial upper bound"
+read highcons
+
+AoA=${AoAs}
+trans=${transs}
+lowcon=${lowcons}
+highcon=${highcons}
+
+# Start the guess at the halfway point between the upper and lower
+tempcon=$(echo "$highcon + $lowcon" | bc -l )
+testcon=$(echo "$tempcon / 2.0 " | bc -l )
+
+echo $testcon
+
+# Declare function that creates directory with input files
+start_case () {
+	aoa=$1
+	testcon=$2
+	mkdir AoA_${aoa}_$testcon
+	printf "Count has a value of $count\n"
+	cd AoA_${aoa}_$testcon
+        cp ../Base/naca.1.inp .
+        cp ../Base/mixsur.i .
+        ln -s ../grid.in .
+        sed "s/ALPHA = 0.0/AlPHA = $aoa/g" < naca.1.inp > temp
+        sed "s/BCPAR2(2) = 0.0/BCPAR2(2) = $testcon/g" < temp > temp2
+	mixsur < mixsur.i > mixsur.out
+	rm -f temp naca.1.inp
+ 	mv temp2 naca.1.inp
+	cd .. 	
+} 
+
+err=100.0    # initialize error
+count=1      # keep track of interations
+rstart=1     # if there is a solution file then copy it and restart
+maxit=20     # max iterations
+
+while [ $count -lt $maxit  ] ; do
+	if [ $rstart -eq 1 ]; then
+       		start_case $AoA $testcon
+		cd AoA_${aoa}_$testcon
+                overrun naca.1 > output.out
+		transloc=$( getransloc ) # call script that checks trans 
+		cd ..  
+	else  # We are restarting a solution (make sure starts laminar)
+       		start_case $AoA $testcon
+		cd AoA_${aoa}_$testcon
+		sed "s/RESTRT = .F./RESTRT = .T./g" < naca.1.inp > temp
+		sed "s/NSTEPS = 100000/NSTEPS = 75000/g" < temp > temp2
+		mv temp2 naca.1.inp
+		rm -f temp2 temp
+		cp ../AoA_${aoa}_$lowcon/q.save .
+                overrun naca.1 > output.out
+		transloc=$( getransloc ) 
+		cd ..         	 
+  	fi
+	
+	# Check if we are within tolerance
+	errtemp=$( echo "$trans - $transloc" | bc -l )
+	err=$( echo "$errtemp * $errtemp" | bc -l ) 	
+	echo "$err"
+	if [ $( echo "$err < $tol" | bc -l) -eq 1 ]; then
+		count=$maxit
+	fi 	
+	echo "$errtemp"
+	# Rearange the bounds (If we do not transition)  
+	if [ $( echo "$errtemp < 0" | bc -l) ]; then # Actual check
+		if [ $( echo "$testcon > $lowcon" | bc -l) ];then
+			lowcon=$testcon 
+	        else 
+			lowcon=$( echo "$testcon * .95" | bc -l )
+	        fi
+                rstart=0 
+	else   # If we transtion to early 
+		if [ $( echo "$testcon < $highcon" | bc -l) ];then
+			highcon=$testcon
+		else
+			highcon=$( echo "$testcon * 1.05" | bc -l )
+		fi 
+	fi
+        # reset the current constant	
+	tempcon=$(echo "$highcon + $lowcon" | bc -l )
+	testcon=$(echo "$tempcon / 2.0 " | bc -l )
+	((count++))
+done
+
