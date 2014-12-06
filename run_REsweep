@@ -1,0 +1,25 @@
+#!/bin/bash 
+
+rey=( 801800.0 1200300.0 1600400.0 2002800.0 2266700.0 2333300.0 2402800.0 2402800.0 2533300.0 2598800.0 2640000.0 2733300.0 2801600.0 )
+rLen=${#rey[@]} #Lenth of the Reynolds number array
+
+alfa=( 0.0 )
+aLen=${#alfa[@]}
+
+for (( i=0; i<${aLen}; i++ )); do
+	mkdir AoA_${alfa[i]}
+	cd AoA_${alfa[i]}
+	for ((j=0; j<${rLen}; j++ )); do
+       		mkdir RE${rey[j]}
+		cd RE${rey[j]}
+		cp ../../Base/naca.1.inp .
+		cp ../../Base/mixsur.i .
+		ln -s ../../grid.in .
+                sed "s/ALPHA = 0.0/AlPHA = ${alfa[i]}/g" < naca.1.inp > temp
+		sed "s/REY = 0.0/REY = ${rey[j]}/g" < temp > temp2 
+		rm -f temp naca.1.inp
+		mv temp2 naca.1.inp
+	        cd ..
+	done 
+	cd ..
+done
