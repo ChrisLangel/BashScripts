@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# ---------------------------------------
+
+# The correlation that will be generated 
+cornum=3
+
+# List the non-dimensional roughness height and its respective density in order.   
+#cases=(125 9 3 175 9 3)
+cases=(125 3 3 175 3 2 125 3 2)
+
+# ---------------------------------------
+
+lencases=${#cases[@]}
+numcases=$( echo "$lencases/3 " | bc )
+
+# Construct input for calculating the choosen correlation  
+for (( i=0; i<${numcases}; i++ )); do
+	ind1=$( echo "$i*3" | bc )
+        ind2=$( echo "$ind1 + 1" | bc )
+        ind3=$( echo "$ind1 + 2" | bc )
+	echo ${cases[ind1]} >  corinp
+        echo ${cases[ind2]} >> corinp	
+        echo ${cases[ind3]} >> corinp	
+        echo $cornum        >> corinp 
+        python intcp.py      <  corinp
+        echo $ind1	
+	rm -f corinp
+done
+
+# start constructing input for plotting function
+echo $numcases > pltinp
+echo $cornum  >> pltinp 
+
+for (( j=0; j<${numcases}; j++ )); do
+	ind1=$( echo "$j*3" | bc )
+        ind2=$( echo "$ind1 + 1" | bc ) 	
+        ind3=$( echo "$ind1 + 2" | bc ) 	
+	echo ${cases[ind1]} >> pltinp
+	echo ${cases[ind2]} >> pltinp
+	echo ${cases[ind3]} >> pltinp
+	echo 
+done
+
+# call the generalized plotting function 
+python plot_corG.py < pltinp
