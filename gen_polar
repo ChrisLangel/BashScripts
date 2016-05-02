@@ -1,0 +1,36 @@
+#!/bin/bash 
+
+rey=( 2.4 3.2 )
+rLen=${#rey[@]} #Lenth of the Reynolds number array
+
+alfa=( -11.0 -10.0 -9.0 -8.0 -7.0 -6.0 -5.0 -4.0 -3.0 -2.0 -1.0 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 )
+aLen=${#alfa[@]}
+
+
+
+for (( i=0; i<${rLen}; i++ )); do
+	mkdir RE${rey[i]}
+	cd RE${rey[i]}
+        cp ../run.s814.slurm .
+	for ((j=0; j<${aLen}; j++ )); do
+       		mkdir AoA_${alfa[j]}
+		cd AoA_${alfa[j]}
+                cp ../../go.x .
+		cp ../../Base/s814_cgrid.1.inp .
+		cp ../../Base/mixsur.fmp .
+		cp ../../Base/grid.ibi .
+		ln -s ../../Base/grid.in  grid.in 
+                sed "s/ALPHA = 0.0/ALPHA = ${alfa[j]}/g" < s814_cgrid.1.inp > temp
+		sed "s/REY = 0.0/REY = ${rey[i]}/g" < temp > temp2 
+		rm -rf temp 
+		mv temp2 s814_cgrid.1.inp
+	        cd ..
+	done 
+	cd ..
+done
+
+
+
+
+
+

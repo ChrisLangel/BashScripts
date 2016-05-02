@@ -1,0 +1,25 @@
+#!/bin/bash 
+
+dirRE=$(find . -name 'RE*' -type d)
+
+first=1
+
+for dirR in $dirRE ; do 
+	if [ $first -eq 1 ]; then
+        	cd $dirR
+        	overrun naca.1 > output.out &
+		cd ..
+                first=2
+        else	
+        	cd $dirR
+                overrun naca.1 > output.out 
+                cd ..
+                first=1
+        fi 
+done
+
+
+
+
+
+
